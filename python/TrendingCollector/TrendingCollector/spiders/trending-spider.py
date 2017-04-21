@@ -9,8 +9,14 @@ class TrendingSpider(scrapy.Spider):
 #        "https://github.com/trending/developers"
 # save target web pages to local folder is preferred in developing stage
         "file:///home/yangfeng/cocoding/githubtrending/testpage/repositories/Trending%20repositories%20on%20GitHub%20today.html",
-        "file:///home/yangfeng/cocoding/githubtrending/testpage/developers/Trending%20developers%20on%20GitHub%20today.html"
+#        "file:///home/yangfeng/cocoding/githubtrending/testpage/developers/Trending%20developers%20on%20GitHub%20today.html"
     ]
+
+    def stripTextArray(self, textArray, index):
+        if len(textArray) > index:
+            return textArray[index].strip()
+        else:
+            return ""
 
     def stripText(self, text):
         if text:
@@ -117,10 +123,36 @@ class TrendingSpider(scrapy.Spider):
         for sel in response.xpath('//ol[@class="repo-list"]/li'):
             gist = sel.xpath('.//h3/a/span/text()').extract_first()
             name = self.stripText(sel.xpath('.//h3/a/text()')[1].extract())
-            link = sel.xpath('.//h3/a/@href').extract_first()
+            link = "https://github.com" + sel.xpath('.//h3/a/@href').extract_first()
 #            print gist[0].strip(), name[1].strip(), link[0]
-            print gist, name, link
+#            print gist, name, link
+#            skip right-top star/unstar action
+#            descIcon = sel.xpath('.//div[@class="py-1"]/p/g-emoji/@fallback-src').extract()
+            descIcon = self.stripTextArray(sel.xpath('.//div[@class="py-1"]/p/g-emoji/@fallback-src').extract(), 0)
+            descArray = sel.xpath('.//div[@class="py-1"]/p/text()').extract()
+            desc = self.stripTextArray(descArray, 0)
+            if descIcon != "":
+                desc = self.stripTextArray(descArray, 1)
+#            print desc, "<", descIcon, ">" #, descArray
 
+            # repo extra info
+            extra = sel.xpath('.//div[@class="f6 text-gray mt-2"]')
+            # programmingLanguage
+            langColor = self.stripTextArray(extra.xpath('./span[@class="repo-language-color ml-0"]/@style').extract(), 0)
+            lang = self.stripTextArray(extra.xpath('./span[@itemprop="programmingLanguage"]/text()').extract(), 0)
+            print lang, "<", langColor, ">" #, descArray
+
+            # stargazers and network
+            starFork = extra.xpath('./a[@class="muted-link mr-3"]').extract()
+            print len(starFork), starFork
+
+            # Built by
+            builtBy = extra.xpath('./a[@class="no-underline"]').extract()
+            print builtBy
+
+            # summary star
+            summaryStar = extra.xpath('./span/text()').extract()
+            print summaryStar
 
     def parseDeveloperItems(self, response):
         print "parseDeveloperItems", response.url
