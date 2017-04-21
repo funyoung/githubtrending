@@ -2,19 +2,22 @@
 import scrapy
 
 class TrendingSpider(scrapy.Spider):
-    name = "trending"
+    name = "full"
     allowed_domains = ["github.com"]
     start_urls = [
 #        "https://github.com/trending",
 #        "https://github.com/trending/developers"
 # save target web pages to local folder is preferred in developing stage
-        "file:///home/yangfeng/cocoding/githubtrending/testpage/repositories/Trending%20repositories%20on%20GitHub%20today.html",
+#        "file:///home/yangfeng/cocoding/githubtrending/testpage/repositories/Trending%20repositories%20on%20GitHub%20today.html",
         "file:///home/yangfeng/cocoding/githubtrending/testpage/developers/Trending%20developers%20on%20GitHub%20today.html"
     ]
 
-    def stripText(self, text):
+    def stripText(self, text, index):
         if text:
-            return text.strip()
+            if text[index]:
+                return text[index].strip()
+            else:
+                return ""
         else:
             return ""
 
@@ -33,7 +36,7 @@ class TrendingSpider(scrapy.Spider):
             link = sel.xpath('./@href').extract_first()
 #            print name,link
             timeOptions.add(self.stripTimeOptionItem(link))
-            
+
         return timeOptions
 
     def stripLanguageOption(self, response):
@@ -48,7 +51,7 @@ class TrendingSpider(scrapy.Spider):
             
         print "the len of language options len: "
         print len(langOptions)
-            
+
         # Trending filters: other hidden languages
         #print "other hidden language filter options"
         for sel in response.xpath('//div[@class="select-menu js-menu-container js-select-menu"]/div/div/div[@class="select-menu-list"]/div/a'):
@@ -93,15 +96,12 @@ class TrendingSpider(scrapy.Spider):
             for time in timeOptions:
                 if isDeveloper == 1:
                     link = lang.replace("/developers", "")
-#                    yield scrapy.Request(link + time, callback=self.parseRepoItems)
-#                    yield scrapy.Request(lang + time, callback=self.parseDeveloperItems)
+                    yield scrapy.Request(link + time, callback=self.parseRepoItems)
+                    yield scrapy.Request(lang + time, callback=self.parseDeveloperItems)
                 else:
-#                    yield scrapy.Request(lang + time, callback=self.parseRepoItems)
+                    yield scrapy.Request(lang + time, callback=self.parseRepoItems)
                     link = lang.replace("/trending", "/trending/developers")
-#                    yield scrapy.Request(link + time, callback=self.parseDeveloperItems)
-
-        self.parseRepoItems(response)
-        self.parseDeveloperItems(response)
+                    yield scrapy.Request(link + time, callback=self.parseDeveloperItems)
 
         pass
 
@@ -110,16 +110,16 @@ class TrendingSpider(scrapy.Spider):
         fileName = "subPageRequest.log"
         with open(fileName, 'ab') as file:
             file.write(response.url + "\n")
-            
+
         # todo: how to parse gistName out in more straightward ways
         # Trending repositories items: (gistName, repoName, repoUrl, star/unstarAction description, languageIndicator, languageName, starIndicator, starCount, forkIndicator, forkCount, builderList(developerAvatar, developerName), contributorUrl, starSummary)
         #print "trending items"
         for sel in response.xpath('//ol[@class="repo-list"]/li'):
             gist = sel.xpath('.//h3/a/span/text()').extract_first()
-            name = self.stripText(sel.xpath('.//h3/a/text()')[1].extract())
+            name = sel.xpath('.//h3/a/text()').extract()[1]
             link = sel.xpath('.//h3/a/@href').extract_first()
 #            print gist[0].strip(), name[1].strip(), link[0]
-            print gist, name, link
+#            print gist, name, link
 
 
     def parseDeveloperItems(self, response):
@@ -132,9 +132,9 @@ class TrendingSpider(scrapy.Spider):
         # Trending developers items: (index, logo, gistName, organizationName, repoIndicator, repoDescription, repoUrl)
         #print "trending items"
         for sel in response.xpath('//ol[@class="user-leaderboard-list leaderboard-list"]/li'):
-            name = self.stripText(sel.xpath('.//h2/a/text()').extract_first())
-            fullName = self.stripText(sel.xpath('.//h2/a/span/text()').extract_first())
+            name = sel.xpath('.//h2/a/text()').extract_first()
+            fullName = sel.xpath('.//h2/a/span/text()').extract_first()
             link = sel.xpath('.//h2/a/@href').extract_first()
 #            print name[0].strip(), self.stripText(fullName, 0), link[0]
-            print name, fullName, link
+#            print name, fullName, link
 
