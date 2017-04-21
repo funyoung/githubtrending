@@ -22,8 +22,6 @@ class TrendingSpider(scrapy.Spider):
             return ""
 
     def parse(self, response):
-        fileName = "subPageRequest.log"
-
         timeOptions = []
         # Trending filters: today, this week, this month
         # print "time filter options"
@@ -35,34 +33,60 @@ class TrendingSpider(scrapy.Spider):
             
         # Trending filters: always shown languages
         #print "always shown language filter options"
+        langSet = set([])
         languageOptions = []
         for sel in response.xpath('//ul[@class="filter-list small language-filter-list"]/li/a'):
             name = sel.xpath('./text()').extract()
             link = sel.xpath('./@href').extract()
             for item in link:
-                for lang in timeOptions:
-                    languageOptions.append(item + lang)
+                languageOptions.append(item)
+                langSet.add(item)
             
-        # todo: how to avoid the duplicate sub page request?
-        # nextPage = languageOptions[i] + timeOptions[j]
-        # yield scrapy.Request(nextPage, callback=self.parse)
+        print "the len of time and language options len: "
+        print len(timeOptions), len(languageOptions), len(langSet)
+
         # Trending filters: other hidden languages
         #print "other hidden language filter options"
         for sel in response.xpath('//div[@class="select-menu js-menu-container js-select-menu"]/div/div/div[@class="select-menu-list"]/div/a'):
             name = sel.xpath('./span/text()').extract()
             link = sel.xpath('./@href').extract()
             for item in link:
-                for lang in timeOptions:
-                    nextPage = item + lang
-                    languageOptions.append(nextPage)
-                    yield scrapy.Request(nextPage, callback=self.parse)
+                languageOptions.append(item)
+                langSet.add(item)
+
+
+        print "the len of time and language options len: "
+        print len(timeOptions), len(languageOptions), len(langSet)
+
+        requestUrl = response.url
+        print "try to remove", requestUrl
+        if requestUrl in langSet:
+            languageOptions.remove(response.url)
+            langSet.remove(response.url)
+
+        # todo: how to avoid the duplicate sub page request?
+        # nextPage = languageOptions[i] + timeOptions[j]
+        # yield scrapy.Request(nextPage, callback=self.parse)
+        print "the len of time and language options len: "
+        print len(timeOptions), len(languageOptions), len(langSet)
+        total = 0
+        for sel in timeOptions:
+            for lang in languageOptions:
+                nextPage = lang + sel
+                total += 1
+#                yield scrapy.Request(nextPage, callback=self.parseItems)
+
+        print "the subPage count: ", total
+#        yield self.parseItems
             
+        pass
+
+    def parseItems(self, response):
         print response.url
+
+        fileName = "subPageRequest.log"
         with open(fileName, 'ab') as file:
             file.write(response.url + "\n")
-
-#        print(languageOptions)
-#        print(timeOptions)
 
         # todo: how to parse gistName out in more straightward ways
         # Trending repositories items: (gistName, repoName, repoUrl, star/unstarAction description, languageIndicator, languageName, starIndicator, starCount, forkIndicator, forkCount, builderList(developerAvatar, developerName), contributorUrl, starSummary)
@@ -71,6 +95,5 @@ class TrendingSpider(scrapy.Spider):
             gist = sel.xpath('.//h3/a/span/text()').extract()
             name = sel.xpath('.//h3/a/text()').extract()
             link = sel.xpath('.//h3/a/@href').extract()
-            #print gist[0].strip(), name[1].strip(), link[0]
+            print gist[0].strip(), name[1].strip(), link[0]
 
-        pass
