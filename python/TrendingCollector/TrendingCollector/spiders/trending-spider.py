@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+from bs4 import BeautifulSoup
 import scrapy
+import re
 
 class TrendingSpider(scrapy.Spider):
     name = "trending"
@@ -30,26 +32,35 @@ class TrendingSpider(scrapy.Spider):
         else:
             return ""
 
-    def stripTimeOption(self, response):
+    def stripTimeOption(self, bs):
         # Trending filters: today, this week, this month
         # print "time filter options"
         timeOptions = set([])
-        for sel in response.xpath('//div[@class="select-menu js-menu-container js-select-menu float-right select-menu-modal-right"]/div/div/div[@class="select-menu-list"]/div/a'):
-            name = sel.xpath('./span/text()').extract_first()
-            link = sel.xpath('./@href').extract_first()
-#            print name,link
+#        for sel in response.xpath('//div[@class="select-menu js-menu-container js-select-menu float-right select-menu-modal-right"]/div/div/div[@class="select-menu-list"]/div/a'):
+#            name = sel.xpath('./span/text()').extract_first()
+#            link = sel.xpath('./@href').extract_first()
+        for l in bs.find(self.time_menu_list, role="menu").find_all('a'):
+            link = l.get('href')
+            name = l.find('span').string
+            print link, name
             timeOptions.add(self.stripTimeOptionItem(link))
             
+        print "the len of time options len: "
+        print len(timeOptions)
+
         return timeOptions
 
-    def stripLanguageOption(self, response):
+    def stripLanguageOption(self, bs, requestUrl):
         # Trending filters: always shown languages
         #print "always shown language filter options"
         langOptions = set([])
-        for sel in response.xpath('//ul[@class="filter-list small language-filter-list"]/li/a'):
-            name = sel.xpath('./text()').extract_first()
-            link = sel.xpath('./@href').extract_first()
-#            print name,link
+#        for sel in response.xpath('//ul[@class="filter-list small language-filter-list"]/li/a'):
+#            name = sel.xpath('./text()').extract_first()
+#            link = sel.xpath('./@href').extract_first()
+        for l in bs.find('ul', class_="filter-list small language-filter-list").find_all('a'):
+            link = l.get('href')
+            name = l.string
+            print link, name
             langOptions.add(link)
             
         print "the len of language options len: "
@@ -57,16 +68,18 @@ class TrendingSpider(scrapy.Spider):
             
         # Trending filters: other hidden languages
         #print "other hidden language filter options"
-        for sel in response.xpath('//div[@class="select-menu js-menu-container js-select-menu"]/div/div/div[@class="select-menu-list"]/div/a'):
-            name = sel.xpath('./span/text()').extract_first()
-            link = sel.xpath('./@href').extract_first()
-#            print name, link
+#        for sel in response.xpath('//div[@class="select-menu js-menu-container js-select-menu"]/div/div/div[@class="select-menu-list"]/div/a'):
+#            name = sel.xpath('./span/text()').extract_first()
+#            link = sel.xpath('./@href').extract_first()
+        for l in bs.find(self.language_menu_list, role="menu").find_all('a'):
+            link = l.get('href')
+            name = l.find('span').string
+            print link, name
             langOptions.add(link)
             
         print "the len of language options len: "
         print len(langOptions)
 
-        requestUrl = response.url
         print "try to remove", requestUrl
         if requestUrl in langOptions:
             langOptions.remove(requestUrl)
@@ -75,6 +88,21 @@ class TrendingSpider(scrapy.Spider):
         print len(langOptions)
 
         return langOptions
+
+    def has_class(self, tag):
+        return tag.has_attr('class')
+
+    def has_data_pjax(self, tag):
+        return tag.has_attr('data-pjax')
+
+    def time_menu_list(self, tag):
+        return self.has_class(tag) and not self.has_data_pjax(tag)
+
+    def language_menu_list(self, tag):
+        return self.has_class(tag) and self.has_data_pjax(tag)
+
+    def small_language_list(self, tag):
+        return self.has_class(tag) and self.has_data_pjax(tag)
 
     def parse(self, response):
         # test code to save response to local file
@@ -86,8 +114,10 @@ class TrendingSpider(scrapy.Spider):
         with open(fileName, 'wb') as file:
             file.write(response.url + "\n")
 
-        timeOptions = self.stripTimeOption(response);
-        langOptions = self.stripLanguageOption(response);
+        bs = BeautifulSoup(response.body)
+        timeOptions = self.stripTimeOption(bs);
+        langOptions = self.stripLanguageOption(bs, response.url);
+#        requestUrl = response.url
 
         isDeveloper = 0
         for lang in langOptions:
@@ -109,9 +139,69 @@ class TrendingSpider(scrapy.Spider):
         self.parseRepoItems(response)
         self.parseDeveloperItems(response)
 
+#        b = BeautifulSoup('<a href="/zeit/pkg"> <span class="text-normal">zeit / </span>pkg </a>')
+#        a = b.find('a')
+#        print a.get('href')
+#        print a.find('span').string
+#        print a.string
+#        print a.get_text()
+#        print a.contents[2]
+#        print a.contents[1]
+#        print a.contents[0]
+#        print len(a.contents)
+#
+#        print b.find_all('a')
+#        i = b.find('a')
+##        for i in b.find_all('a'):
+#        print i
+#        text = i.get_text()
+#        print text
+#        text2 = text.split('/')
+#        print text2
+
         pass
 
     def parseRepoItems(self, response):
+        bs = BeautifulSoup(response.body)
+        for sel in bs.find('ol', class_="repo-list").find_all('li'):
+           a = sel.find('h3').find('a')
+           link = a.get('href')
+           name = a.contents[2].strip()
+           gist = a.find('span').string
+           print link, gist, name
+
+           p = sel.find('p')
+#           print len(p.contents)
+           index = len(p.contents) - 1
+           descText = p.contents[index].strip()
+           descIcon = p.find('g-emoji')
+           if descIcon is None:
+               descIcon = ""
+           else:
+               descIcon = descIcon.get("fallback-src")
+#           print descText, " <", descIcon, ">"
+            
+           langColor = sel.find('span', class_="repo-language-color ml-0")
+           if langColor is None:
+               langColor = ""
+           else:
+               langColor = langColor.get("style")
+           lang = sel.find('span', itemprop="programmingLanguage")
+           if lang is None:
+               lang = ""
+           else:
+               lang = lang.string.strip()
+#           print lang, " < ", langColor
+
+           # stargazers and network
+           # Built by
+           # summary star
+           starSum = sel.find('span', class_="float-right")
+           index = len(starSum) - 1
+           print starSum.contents[index].strip()
+
+
+    def parseRepoItemsWithoutBs(self, response):
         print "parseRepoItems",  response.url
         fileName = "subPageRequest.log"
         with open(fileName, 'ab') as file:
