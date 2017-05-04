@@ -14,13 +14,29 @@ from hashlib import md5
 import MySQLdb
 import MySQLdb.cursors
 
+from TrendingCollector.translate.youdaotranslate import *
+
 class plainTextWithEncodingCnblogsPipeline(object):
+    translator = youdao_API('1749671432')
+
     def __init__(self):
         self.file = codecs.open('trending.txt', 'w', encoding='utf-8')
+
     def process_item(self, item, spider):
 #        line = json.dumps(dict(item), ensure_ascii=False) + "\n"
         d = dict(item)
-        line = d['title'] + "\n" + d['desc'] + " -- " + d['link']  + "\n\n"
+        descText = d['desc']
+        self.translator.get_url(descText)
+        jsonText =  json.loads(self.translator.get_json(descText))
+        target = jsonText.get('translation')
+#        print target
+        line = ""
+        line = line + d['title'] + "\n"
+        line = line + d['link'] + "\n"
+        line = line + descText + "\n"
+        line = line + target[0] + "\n"
+        line = line + "\n"
+
         self.file.write(line)
         
         return item
