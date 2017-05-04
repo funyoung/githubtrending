@@ -2,6 +2,7 @@
 from bs4 import BeautifulSoup
 import scrapy
 import re
+from TrendingCollector.items import *
 
 class TrendingSpider(scrapy.Spider):
     name = "trending"
@@ -136,8 +137,8 @@ class TrendingSpider(scrapy.Spider):
                     link = lang.replace("/trending", "/trending/developers")
 #                    yield scrapy.Request(link + time, callback=self.parseDeveloperItems)
 
-        self.parseRepoItems(response)
-        self.parseDeveloperItems(response)
+        return self.parseRepoItems(response)
+#        self.parseDeveloperItems(response)
 
 #        b = BeautifulSoup('<a href="/zeit/pkg"> <span class="text-normal">zeit / </span>pkg </a>')
 #        a = b.find('a')
@@ -166,6 +167,7 @@ class TrendingSpider(scrapy.Spider):
         return tag.contents[index]
     
     def parseRepoItems(self, response):
+        items = []
         bs = BeautifulSoup(response.body)
         for sel in bs.find('ol', class_="repo-list").find_all('li'):
            a = sel.find('h3').find('a')
@@ -208,19 +210,32 @@ class TrendingSpider(scrapy.Spider):
            # Built by
            contributors = []
            c = sel.find('a', class_="no-underline")
-           action = c.get('href')
-           for i in c.find_all('img'):
-               title = i.get('title')
-               src = i.get('src')
-               print src
-               contributors.append(title)
-#               contributors.append(src)
+           print c
+           if c is None:
+               action = ""
+           else:
+               action = c.get('href')
+               for i in c.find_all('img'):
+                   title = i.get('title')
+                   src = i.get('src')
+                   print src
+                   contributors.append(title)
+#                   contributors.append(src)
            print action, len(contributors), contributors
            
            # summary star
            starSum = sel.find('span', class_="float-right")
            starSum = self.lastContent(starSum).strip()
            print starSum
+
+           item = TrendingcollectorItem()
+           item['title'] = gist + name
+           item['link'] = "https://github.com/" + link
+           item['listUrl'] = action
+           item['desc'] = descText
+           items.append(item)
+
+        return items
 
     def parseRepoItemsWithoutBs(self, response):
         print "parseRepoItems",  response.url

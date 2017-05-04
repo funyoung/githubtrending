@@ -83,3 +83,17 @@ NEWSPIDER_MODULE = 'TrendingCollector.spiders'
 #HTTPCACHE_DIR='httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES=[]
 #HTTPCACHE_STORAGE='scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+# Configure item pipelines
+# See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
+ITEM_PIPELINES = {
+    'TrendingCollector.pipelines.JsonWithEncodingCnblogsPipeline': 300,
+    'TrendingCollector.pipelines.MySQLStoreCnblogsPipeline': 300,
+}
+
+# start MySQL database configure setting
+MYSQL_HOST = 'localhost'
+MYSQL_DBNAME = 'cnblogsdb'
+MYSQL_USER = 'appserver'
+MYSQL_PASSWD = '123456'
+# end of MySQL database configure setting
