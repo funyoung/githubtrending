@@ -8,10 +8,10 @@ class TrendingSpider(scrapy.Spider):
     name = "trending"
     allowed_domains = ["github.com"]
     start_urls = [
-#        "https://github.com/trending",
+        "https://github.com/trending",
 #        "https://github.com/trending/developers"
 # save target web pages to local folder is preferred in developing stage
-        "file:///home/yangfeng/cocoding/githubtrending/testpage/repositories/Trending%20repositories%20on%20GitHub%20today.html",
+#        "file:///home/yangfeng/cocoding/githubtrending/testpage/repositories/Trending%20repositories%20on%20GitHub%20today.html",
 #        "file:///home/yangfeng/cocoding/githubtrending/testpage/developers/Trending%20developers%20on%20GitHub%20today.html"
     ]
 
@@ -126,18 +126,22 @@ class TrendingSpider(scrapy.Spider):
                 isDeveloper = 1
             break
 
-        for lang in langOptions:
-            for time in timeOptions:
-                if isDeveloper == 1:
-                    link = lang.replace("/developers", "")
+#        for lang in langOptions:
+#            for time in timeOptions:
+#                if isDeveloper == 1:
+#                    link = lang.replace("/developers", "")
 #                    yield scrapy.Request(link + time, callback=self.parseRepoItems)
 #                    yield scrapy.Request(lang + time, callback=self.parseDeveloperItems)
-                else:
+#                else:
 #                    yield scrapy.Request(lang + time, callback=self.parseRepoItems)
-                    link = lang.replace("/trending", "/trending/developers")
+#                    link = lang.replace("/trending", "/trending/developers")
 #                    yield scrapy.Request(link + time, callback=self.parseDeveloperItems)
 
-        return self.parseRepoItems(response)
+        sub = response.url + "/java"
+        print sub
+        yield scrapy.Request(sub, callback=self.parseRepoItems)
+
+        self.parseRepoItems(response)
 #        self.parseDeveloperItems(response)
 
 #        b = BeautifulSoup('<a href="/zeit/pkg"> <span class="text-normal">zeit / </span>pkg </a>')
@@ -163,8 +167,11 @@ class TrendingSpider(scrapy.Spider):
         pass
 
     def lastContent(self, tag):
-        index = len(tag.contents) - 1
-        return tag.contents[index]
+        if tag is None:
+           return None
+        else:
+           index = len(tag.contents) - 1
+           return tag.contents[index].strip()
     
     def parseRepoItems(self, response):
         items = []
@@ -178,13 +185,17 @@ class TrendingSpider(scrapy.Spider):
 
            p = sel.find('p')
 #           print len(p.contents)
-           index = len(p.contents) - 1
-           descText = p.contents[index].strip()
-           descIcon = p.find('g-emoji')
-           if descIcon is None:
-               descIcon = ""
+           if p is None:
+              descText = ""
+              descIcon = ""
            else:
-               descIcon = descIcon.get("fallback-src")
+               index = len(p.contents) - 1
+               descText = p.contents[index].strip()
+               descIcon = p.find('g-emoji')
+               if descIcon is None:
+                   descIcon = ""
+               else:
+                   descIcon = descIcon.get("fallback-src")
 #           print descText, " <", descIcon, ">"
             
            langColor = sel.find('span', class_="repo-language-color ml-0")
@@ -203,8 +214,8 @@ class TrendingSpider(scrapy.Spider):
            starFork = sel.find_all('a', class_="muted-link mr-3")
            starLink = starFork[0].get('href')
            forkLink = starFork[1].get('href')
-           starLabel = self.lastContent(starFork[0]).strip()
-           forkLabel = self.lastContent(starFork[1]).strip()
+           starLabel = self.lastContent(starFork[0])
+           forkLabel = self.lastContent(starFork[1])
            print starLabel, forkLabel, starLink, forkLink
            
            # Built by
@@ -225,7 +236,7 @@ class TrendingSpider(scrapy.Spider):
            
            # summary star
            starSum = sel.find('span', class_="float-right")
-           starSum = self.lastContent(starSum).strip()
+           starSum = self.lastContent(starSum)
            print starSum
 
            item = TrendingcollectorItem()
