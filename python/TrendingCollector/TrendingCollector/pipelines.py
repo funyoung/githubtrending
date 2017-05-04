@@ -43,7 +43,6 @@ class plainTextWithEncodingCnblogsPipeline(object):
     def spider_closed(self, spider):
         self.file.close()
 
-
 class JsonWithEncodingCnblogsPipeline(object):
     def __init__(self):
         self.file = codecs.open('trending.json', 'w', encoding='utf-8')
