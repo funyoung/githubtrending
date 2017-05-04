@@ -161,6 +161,10 @@ class TrendingSpider(scrapy.Spider):
 
         pass
 
+    def lastContent(self, tag):
+        index = len(tag.contents) - 1
+        return tag.contents[index]
+    
     def parseRepoItems(self, response):
         bs = BeautifulSoup(response.body)
         for sel in bs.find('ol', class_="repo-list").find_all('li'):
@@ -194,12 +198,29 @@ class TrendingSpider(scrapy.Spider):
 #           print lang, " < ", langColor
 
            # stargazers and network
+           starFork = sel.find_all('a', class_="muted-link mr-3")
+           starLink = starFork[0].get('href')
+           forkLink = starFork[1].get('href')
+           starLabel = self.lastContent(starFork[0]).strip()
+           forkLabel = self.lastContent(starFork[1]).strip()
+           print starLabel, forkLabel, starLink, forkLink
+           
            # Built by
+           contributors = []
+           c = sel.find('a', class_="no-underline")
+           action = c.get('href')
+           for i in c.find_all('img'):
+               title = i.get('title')
+               src = i.get('src')
+               print src
+               contributors.append(title)
+#               contributors.append(src)
+           print action, len(contributors), contributors
+           
            # summary star
            starSum = sel.find('span', class_="float-right")
-           index = len(starSum) - 1
-           print starSum.contents[index].strip()
-
+           starSum = self.lastContent(starSum).strip()
+           print starSum
 
     def parseRepoItemsWithoutBs(self, response):
         print "parseRepoItems",  response.url
